@@ -19,14 +19,16 @@ function sendJson(res: ServerResponse, status: number, body: unknown, headers: R
 }
 
 function pathOf(req: IncomingMessage): string {
-  try {
-    return new URL(req.url ?? '/', 'http://entry').pathname;
-  } catch {
-    return '/';
-  }
+  const u = req.url;
+  if (!u) return '/';
+  const q = u.indexOf('?');
+  return q === -1 ? u : u.slice(0, q);
 }
 
-let requestIdCounter = 0;
+let requestIdCounter = 0x10000000;
+function getReqId(): string {
+  return (++requestIdCounter).toString(16).padStart(32, '0');
+}
 
 export function createApp(): Server {
   const store = new ForgeStore();
@@ -37,8 +39,7 @@ export function createApp(): Server {
 
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     // Non-empty X-GitHub-Request-Id header on every response
-    const reqId = randomUUID().replace(/-/g, '') || `req_${++requestIdCounter}`;
-    res.setHeader('x-github-request-id', reqId);
+    res.setHeader('x-github-request-id', getReqId());
 
     const path = pathOf(req);
     const method = req.method ?? 'GET';
@@ -59,7 +60,7 @@ export function createApp(): Server {
       const bodyBuffer = Buffer.concat(chunks);
       let url: URL;
       try {
-        url = new URL(req.url ?? '/', `http://${req.headers.host || '127.0.0.1'}`);
+        url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`);
       } catch {
         sendJson(res, 400, { message: 'Bad request URL' });
         return;
