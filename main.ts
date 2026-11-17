@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   const server = createApp();
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, '0.0.0.0', () => resolve());
+    server.listen(0, () => resolve());
   });
   const address = server.address();
   if (address === null || typeof address === 'string') throw new Error('the server did not bind an ephemeral TCP port');
